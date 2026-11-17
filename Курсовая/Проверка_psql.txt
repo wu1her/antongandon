@@ -1,0 +1,39 @@
+SET
+   table_name    | row_count 
+-----------------+-----------
+ audit_log       |        30
+ bookings        |        16
+ clients         |        15
+ employees       |        15
+ halls           |        15
+ memberships     |        15
+ payments        |        15
+ specializations |        15
+ subscriptions   |        15
+ trainers        |        15
+ trainings       |        15
+(11 rows)
+
+         check_name          | violations 
+-----------------------------+------------
+ Пересечения абонементов     |          0
+ Необеспеченные записи       |          0
+ Переплата                   |          0
+ Превышение вместимости зала |          0
+ Переполнение занятий        |          0
+ Пересечения расписания      |          0
+ Будущая дата рождения       |          0
+(7 rows)
+
+  table_name   | operation | event_count 
+---------------+-----------+-------------
+ payments      | INSERT    |          15
+ subscriptions | INSERT    |          15
+(2 rows)
+
+BEGIN
+psql:output/Курсовая/SQL/03_Проверка.sql:88: NOTICE:  OK: пересечение абонементов отклонено
+psql:output/Курсовая/SQL/03_Проверка.sql:88: NOTICE:  OK: повторная запись отклонена
+psql:output/Курсовая/SQL/03_Проверка.sql:88: NOTICE:  OK: удаление клиента с историей отклонено
+DO
+ROLLBACK
