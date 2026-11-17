@@ -1,0 +1,608 @@
+ПРОВЕРКА ЭТАПА 2. PostgreSQL 17.11 / pgAdmin 4
+17.11.2026
+
+
+==================== types ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+7
+8
+9
+SELECT a.amname AS index_type, count(*) AS index_count
+FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
+JOIN pg_am a ON a.oid=c.relam
+JOIN pg_class t ON t.oid=i.indrelid
+JOIN pg_namespace n ON n.oid=t.relnamespace
+WHERE n.nspname='public'
+GROUP BY a.amname ORDER BY a.amname;
+
+
+
+
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 2
+ 
+Page No:
+​
+of 1
+ 
+index_type
+name
+index_count
+bigint
+1
+btree
+27
+2
+gist
+1
+Total rows: 2
+Query complete 00:00:00.231
+LF
+Ln 9, Col 1
+Execute script
+F5
+
+==================== foreign_keys ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+SELECT c.conrelid::regclass AS table_name,
+       a.attname AS foreign_key,
+       EXISTS (
+        SELECT 1 FROM pg_index i
+        WHERE i.indrelid=c.conrelid AND i.indkey[0]=c.conkey[1]
+          AND i.indisvalid AND i.indisready AND i.indpred IS NULL
+       ) AS has_index
+FROM pg_constraint c
+JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=c.conkey[1]
+WHERE c.contype='f' AND c.connamespace='public'::regnamespace
+ORDER BY c.conrelid::regclass::text,a.attname;
+
+
+
+
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 10
+ 
+Page No:
+​
+of 1
+ 
+table_name
+regclass
+foreign_key
+name
+has_index
+boolean
+1
+bookings
+client_id
+true
+2
+bookings
+training_id
+true
+3
+payments
+employee_id
+true
+4
+payments
+subscription_id
+true
+5
+subscriptions
+client_id
+true
+6
+subscriptions
+employee_id
+true
+7
+subscriptions
+membership_id
+true
+8
+trainers
+specialization_id
+true
+9
+trainings
+hall_id
+true
+10
+trainings
+trainer_id
+true
+Total rows: 10
+Query complete 00:00:00.108
+LF
+Ln 13, Col 1
+Execute script
+F5
+
+==================== Btree_before ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF)
+SELECT training_id,title,starts_at FROM bench_trainings
+WHERE NOT is_cancelled
+  AND starts_at >= TIMESTAMPTZ '2026-11-17 00:00:00+03'
+  AND starts_at < TIMESTAMPTZ '2026-11-24 00:00:00+03'
+ORDER BY starts_at;
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 12
+ 
+Page No:
+​
+of 1
+ 
+QUERY PLAN
+text
+1
+Sort (actual rows=151 loops=1)
+2
+  Sort Key: starts_at
+3
+  Sort Method: quicksort  Memory: 35kB
+4
+  Buffers: local hit=207
+5
+  ->  Seq Scan on bench_trainings (actual rows=151 loops=1)
+6
+        Filter: ((NOT is_cancelled) AND (starts_at >= '2026-11-17 00:00:00+03'::timestamp with time zone) AND (starts_at < '2026-11-24 00:00:00+03'::timestamp with time zone))
+7
+        Rows Removed by Filter: 19849
+8
+        Buffers: local hit=207
+9
+Planning:
+10
+  Buffers: shared hit=14
+11
+Planning Time: 0.182 ms
+12
+Execution Time: 1.650 ms
+Total rows: 12
+Query complete 00:00:00.107
+LF
+Ln 6, Col 20
+Execute script
+F5
+
+==================== Btree_after ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+7
+8
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF)
+SELECT training_id,title,starts_at FROM bench_trainings
+WHERE NOT is_cancelled
+  AND starts_at >= TIMESTAMPTZ '2026-11-17 00:00:00+03'
+  AND starts_at < TIMESTAMPTZ '2026-11-24 00:00:00+03'
+ORDER BY starts_at;
+
+
+
+
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 7
+ 
+Page No:
+​
+of 1
+ 
+QUERY PLAN
+text
+1
+Index Scan using bench_trainings_start on bench_trainings (actual rows=151 loops=1)
+2
+  Index Cond: ((starts_at >= '2026-11-17 00:00:00+03'::timestamp with time zone) AND (starts_at < '2026-11-24 00:00:00+03'::timestamp with time zone))
+3
+  Buffers: local hit=3 read=2
+4
+Planning:
+5
+  Buffers: shared hit=14, local read=1
+6
+Planning Time: 0.166 ms
+7
+Execution Time: 0.054 ms
+Total rows: 7
+Query complete 00:00:00.061
+LF
+Ln 8, Col 1
+Execute script
+F5
+
+==================== GiST_before ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF)
+SELECT subscription_id FROM bench_subscriptions
+WHERE client_id=CAST(1729 AS bigint)
+  AND daterange(start_date,end_date,'[]') @> DATE '2025-05-15';
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 8
+ 
+Page No:
+​
+of 1
+ 
+QUERY PLAN
+text
+1
+Seq Scan on bench_subscriptions (actual rows=1 loops=1)
+2
+  Filter: ((client_id = '1729'::bigint) AND (daterange(start_date, end_date, '[]'::text) @> '2025-05-15'::date))
+3
+  Rows Removed by Filter: 19999
+4
+  Buffers: local hit=128
+5
+Planning:
+6
+  Buffers: shared hit=8
+7
+Planning Time: 0.124 ms
+8
+Execution Time: 1.010 ms
+Total rows: 8
+Query complete 00:00:00.057
+LF
+Ln 4, Col 64
+Execute script
+F5
+
+==================== GiST_after ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF)
+SELECT subscription_id FROM bench_subscriptions
+WHERE client_id=CAST(1729 AS bigint)
+  AND daterange(start_date,end_date,'[]') @> DATE '2025-05-15';
+
+
+
+
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 7
+ 
+Page No:
+​
+of 1
+ 
+QUERY PLAN
+text
+1
+Index Scan using bench_subscriptions_period on bench_subscriptions (actual rows=1 loops=1)
+2
+  Index Cond: ((client_id = '1729'::bigint) AND (daterange(start_date, end_date, '[]'::text) @> '2025-05-15'::date))
+3
+  Buffers: local hit=4
+4
+Planning:
+5
+  Buffers: shared hit=11
+6
+Planning Time: 0.289 ms
+7
+Execution Time: 0.082 ms
+Total rows: 7
+Query complete 00:00:00.079
+LF
+Ln 6, Col 1
+Execute script
+F5
+
+==================== integrity ====================
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+SET TIME ZONE 'Europe/Moscow';
+-- Число строк в каждой таблице.
+SELECT 'specializations' AS table_name, count(*) AS row_count FROM specializations
+UNION ALL
+SELECT 'halls' AS table_name, count(*) AS row_count FROM halls
+UNION ALL
+SELECT 'memberships' AS table_name, count(*) AS row_count FROM memberships
+UNION ALL
+SELECT 'clients' AS table_name, count(*) AS row_count FROM clients
+UNION ALL
+SELECT 'trainers' AS table_name, count(*) AS row_count FROM trainers
+UNION ALL
+SELECT 'employees' AS table_name, count(*) AS row_count FROM employees
+UNION ALL
+SELECT 'subscriptions' AS table_name, count(*) AS row_count FROM subscriptions
+UNION ALL
+SELECT 'trainings' AS table_name, count(*) AS row_count FROM trainings
+UNION ALL
+SELECT 'bookings' AS table_name, count(*) AS row_count FROM bookings
+UNION ALL
+SELECT 'payments' AS table_name, count(*) AS row_count FROM payments
+UNION ALL
+SELECT 'audit_log' AS table_name, count(*) AS row_count FROM audit_log
+ORDER BY table_name;
+
+
+-- Во всех проверках ниже ожидается ноль нарушений.
+SELECT 'Пересечения абонементов' AS check_name, count(*) AS violations
+FROM subscriptions a JOIN subscriptions b ON a.client_id=b.client_id
+ AND a.subscription_id<b.subscription_id
+ AND daterange(a.start_date,a.end_date,'[]') && daterange(b.start_date,b.end_date,'[]')
+UNION ALL
+SELECT 'Необеспеченные записи', count(*) FROM bookings b
+JOIN trainings t USING(training_id) JOIN clients c USING(client_id)
+WHERE b.status <> 'cancelled' AND (NOT c.is_active OR t.is_cancelled OR NOT EXISTS (
+ SELECT 1 FROM subscriptions s WHERE s.client_id=b.client_id
+ AND (t.starts_at AT TIME ZONE 'Europe/Moscow')::date BETWEEN s.start_date AND s.end_date
+ AND COALESCE((SELECT sum(p.amount) FROM payments p
+ WHERE p.subscription_id=s.subscription_id AND NOT p.is_refunded),0)=s.sold_price))
+UNION ALL
+SELECT 'Переплата',count(*) FROM subscriptions s
+WHERE COALESCE((SELECT sum(amount) FROM payments p
+ WHERE p.subscription_id=s.subscription_id AND NOT is_refunded),0)>s.sold_price
+UNION ALL
+SELECT 'Превышение вместимости зала',count(*) FROM trainings t
+JOIN halls h USING(hall_id) WHERE t.max_capacity>h.capacity
+UNION ALL
+SELECT 'Переполнение занятий',count(*) FROM trainings t
+WHERE (SELECT count(*) FROM bookings b WHERE b.training_id=t.training_id
+ AND b.status<>'cancelled')>t.max_capacity
+UNION ALL
+SELECT 'Пересечения расписания',count(*) FROM trainings a JOIN trainings b
+ ON a.training_id<b.training_id AND (a.hall_id=b.hall_id OR a.trainer_id=b.trainer_id)
+ AND NOT a.is_cancelled AND NOT b.is_cancelled
+ AND tstzrange(a.starts_at,a.starts_at+make_interval(mins=>a.duration_min),'[)')
+ && tstzrange(b.starts_at,b.starts_at+make_interval(mins=>b.duration_min),'[)')
+UNION ALL
+SELECT 'Будущая дата рождения',count(*) FROM clients WHERE birth_date>CURRENT_DATE;
+
+
+-- Реальные события аудита после первоначальной загрузки.
+SELECT table_name, operation, count(*) AS event_count
+FROM audit_log GROUP BY table_name,operation ORDER BY table_name,operation;
+
+
+-- Отрицательные проверки базовых ограничений. Изменения откатываются.
+BEGIN;
+DO $$
+BEGIN
+ BEGIN
+  INSERT INTO subscriptions(client_id,membership_id,employee_id,start_date,end_date,sold_price)
+  SELECT client_id,membership_id,employee_id,start_date,end_date,sold_price
+  FROM subscriptions WHERE subscription_id=4;
+  RAISE EXCEPTION 'ОШИБКА: пересечение периодов допущено';
+ EXCEPTION WHEN exclusion_violation THEN
+  RAISE NOTICE 'OK: пересечение абонементов отклонено';
+ END;
+ BEGIN
+  INSERT INTO bookings(training_id,client_id)
+  SELECT training_id,client_id FROM bookings WHERE booking_id=1;
+  RAISE EXCEPTION 'ОШИБКА: повторная запись допущена';
+ EXCEPTION WHEN unique_violation THEN
+  RAISE NOTICE 'OK: повторная запись отклонена';
+ END;
+ BEGIN
+  DELETE FROM clients WHERE client_id=1;
+  RAISE EXCEPTION 'ОШИБКА: клиент с историей удалён';
+ EXCEPTION WHEN foreign_key_violation THEN
+  RAISE NOTICE 'OK: удаление клиента с историей отклонено';
+ END;
+END $$;
+ROLLBACK;
+
+
+Scratch Pad
+Data Output
+Messages
+Notifications
+NOTICE:  OK: пересечение абонементов отклонено
+NOTICE:  OK: повторная запись отклонена
+NOTICE:  OK: удаление клиента с историей отклонено
+ROLLBACK
+
+Query returned successfully in 73 msec.
+Total rows:
+Query complete 00:00:00.073
+LF
+Ln 90, Col 1
+Execute script
+F5
