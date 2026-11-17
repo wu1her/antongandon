@@ -1,0 +1,45 @@
+ПРОВЕРКА ДВУХ СОЕДИНЕНИЙ, 18.11.2026
+Опыты выполнены на отдельной базе gym_course_final_check.
+Оба соединения выполняли операции от SET ROLE gym_manager.
+При ожидании второго соединения проверялся pg_stat_activity:
+wait_event_type = Lock, wait_event = advisory.
+
+ОПЫТ 1 — ПЕРЕПЛАТА
+Подготовка в отдельной копии:
+INSERT INTO public.subscriptions(client_id,membership_id,employee_id,start_date,end_date,sold_price)
+VALUES(14,4,2,'2050-01-01','2050-01-31',100) RETURNING subscription_id;
+Полученный subscription_id подставляется вместо S ниже.
+
+Окно А:
+BEGIN;
+SET LOCAL ROLE gym_manager;
+INSERT INTO public.payments(subscription_id,employee_id,amount) VALUES(S,2,60);
+-- Пока не завершать транзакцию.
+
+Окно Б:
+BEGIN;
+SET LOCAL ROLE gym_manager;
+INSERT INTO public.payments(subscription_id,employee_id,amount) VALUES(S,2,60);
+-- Запрос ожидает завершения А.
+
+Окно А: COMMIT;
+Окно Б получает «Сумма платежей превышает цену продажи». Выполнить ROLLBACK.
+Фактический результат: один платёж, сумма 60, цена продажи 100.
+
+ОПЫТ 2 — ПОСЛЕДНЕЕ МЕСТО
+В отдельной копии подготовлены оплаченные абонементы клиентов 14 и 15
+на январь 2051 года и занятие 05.01.2051 10:00+03 с max_capacity = 1.
+Окно А выполняет BEGIN, SET LOCAL ROLE gym_manager и INSERT записи клиента 14.
+Окно Б выполняет BEGIN, SET LOCAL ROLE gym_manager и INSERT записи клиента 15
+на то же занятие. До завершения А второй запрос ожидает advisory-блокировку.
+После COMMIT в А запрос Б отклонён: «На занятии нет свободных мест».
+В Б выполнен ROLLBACK. Фактический результат: одна запись на одно место.
+
+УРОВЕНЬ ИЗОЛЯЦИИ
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+UPDATE public.clients SET is_active=is_active WHERE client_id=1;
+Ожидаемый и фактический результат: «Изменения выполняются на уровне READ COMMITTED».
+После отказа выполняется ROLLBACK.
+
+Опытные строки сохранялись только в отдельной проверочной базе.
+Рабочая gym_course не пополнялась этими сценариями.

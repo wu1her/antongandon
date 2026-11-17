@@ -1,0 +1,280 @@
+ПРОТОКОЛ ПРОВЕРОК
+PostgreSQL 17.11 / pgAdmin 4
+18.11.2026
+
+
+34 автоматические проверки
+------------------------------------------------------------
+
+BEGIN
+SET
+CREATE TABLE
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+DO
+SET
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+ expect_true 
+-------------
+ 
+(1 row)
+
+ expect_error 
+--------------
+ 
+(1 row)
+
+ expect_error 
+--------------
+ 
+(1 row)
+
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+ expect_true 
+-------------
+ 
+(1 row)
+
+SET
+ expect_true 
+-------------
+ 
+(1 row)
+
+ expect_error 
+--------------
+ 
+(1 row)
+
+ expect_error 
+--------------
+ 
+(1 row)
+
+ expect_error 
+--------------
+ 
+(1 row)
+
+RESET
+                  test_name                   | result |                                                           details                                                           
+----------------------------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------
+ 01. Будущая дата рождения                    | OK     | Дата рождения не может быть в будущем
+ 02. Продажа неактивному клиенту              | OK     | Оформление возможно только для активного клиента
+ 03. Расчёт включительной даты и цены         | OK     | Результат соответствует ожиданию
+ 04. Пересечение абонементов                  | OK     | conflicting key value violates exclusion constraint "subscriptions_no_overlap"
+ 05. Переплата                                | OK     | Сумма платежей превышает цену продажи
+ 06. Вместимость зала                         | OK     | Число мест превышает вместимость зала
+ 07. Пересечение по залу                      | OK     | Пересечение расписания по тренеру или залу
+ 08. Пересечение по тренеру                   | OK     | Пересечение расписания по тренеру или залу
+ 09. Неактивный тренер                        | OK     | У неактивного тренера есть будущие занятия
+ 10. Запись без полной оплаты                 | OK     | Запись требует активного клиента и действующего полностью оплаченного абонемента
+ 11. Успешная оплаченная запись               | OK     | Результат соответствует ожиданию
+ 12. Переполнение занятия                     | OK     | На занятии нет свободных мест
+ 13. Ранняя отметка посещения                 | OK     | Посещение отмечается после начала занятия из статуса booked
+ 14. Деактивация записанного клиента          | OK     | Запись требует активного клиента и действующего полностью оплаченного абонемента
+ 15. Возврат при существующей записи          | OK     | Запись требует активного клиента и действующего полностью оплаченного абонемента
+ 16. Перенос занятого занятия                 | OK     | Сначала отмените записи перед изменением расписания
+ 17. Изменение цены сделки                    | OK     | Реквизиты и цена оформленной продажи неизменяемы
+ 18. Изменение суммы платежа                  | OK     | Реквизиты проведённого платежа неизменяемы
+ 19. Удаление невозвращённого платежа         | OK     | Сначала оформите возврат платежа
+ 20. Автоматическая отмена записи             | OK     | Результат соответствует ожиданию
+ 21. Запись на отменённое занятие             | OK     | Запись на начавшееся или отменённое занятие запрещена
+ 22. Возобновление отменённого занятия        | OK     | Отменённое занятие не возобновляется
+ 23. Изменение итоговой отметки               | OK     | Итоговая отметка посещения неизменяема
+ 24. Удаление клиента с историей              | OK     | update or delete on table "clients" violates foreign key constraint "subscriptions_client_id_fkey" on table "subscriptions"
+ 25. Аудит INSERT UPDATE DELETE               | OK     | Результат соответствует ожиданию
+ 26. Менеджер оформляет продажу и оплату      | OK     | Результат соответствует ожиданию
+ 27. Менеджер не удаляет историю              | OK     | permission denied for table clients
+ 28. Менеджер не читает аудит                 | OK     | permission denied for table audit_log
+ 29. Менеджер не подменяет аудит              | OK     | permission denied for table audit_log
+ 30. Аудит доступен администратору            | OK     | Результат соответствует ожиданию
+ 31. Аналитик читает финансовое представление | OK     | Результат соответствует ожиданию
+ 32. Аналитик не читает контакты              | OK     | permission denied for table clients
+ 33. Аналитик не изменяет клиентов            | OK     | permission denied for table clients
+ 34. Аналитик не создаёт таблицы              | OK     | permission denied for schema public
+(34 rows)
+
+ROLLBACK
+
+
+Проверка в pgAdmin
+------------------------------------------------------------
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+7
+SELECT CASE WHEN left(test_name,2)::integer <= 25
+            THEN 'Правила и аудит'
+            ELSE 'Права пользователей' END AS test_group,
+       count(*) AS checks,
+       count(*) FILTER (WHERE result='OK') AS passed
+FROM pg_temp.test_results
+GROUP BY 1 ORDER BY 1;
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 2
+ 
+Page No:
+​
+of 1
+ 
+test_group
+text
+checks
+bigint
+passed
+bigint
+1
+Права пользователей
+9
+9
+2
+Правила и аудит
+25
+25
+Total rows: 2
+Query complete 00:00:00.076
+LF
+Ln 7, Col 23
+Execute script
+F5
+
+Права в pgAdmin
+------------------------------------------------------------
+
+gym_course/postgres@PostgreSQL 17 — учебный сервер
+No limit
+1000 rows
+500 rows
+100 rows
+​
+Query
+Query History
+1
+2
+3
+4
+5
+6
+7
+SELECT r AS role_name,
+ has_table_privilege(r,'public.clients','SELECT') AS clients_read,
+ has_table_privilege(r,'public.payments','INSERT') AS payments_write,
+ has_table_privilege(r,'public.v_daily_revenue','SELECT') AS reports_read,
+ has_table_privilege(r,'public.audit_log','INSERT') AS audit_write
+FROM (VALUES ('gym_admin'),('gym_manager'),('gym_analyst')) AS roles(r)
+ORDER BY r;
+Scratch Pad
+Data Output
+Messages
+Notifications
+Showing rows: 1 to 3
+ 
+Page No:
+​
+of 1
+ 
+role_name
+text
+clients_read
+boolean
+payments_write
+boolean
+reports_read
+boolean
+audit_write
+boolean
+1
+gym_admin
+true
+true
+true
+true
+2
+gym_analyst
+false
+false
+true
+false
+3
+gym_manager
+true
+true
+true
+false
+Total rows: 3
+Query complete 00:00:00.084
+LF
+Ln 7, Col 12
+Execute script
+F5
+
+Транзакционный пример
+------------------------------------------------------------
+
+BEGIN
+SET
+SET
+psql:output/Курсовая_итог/SQL/11_Пример_транзакции.sql:21: NOTICE:  Клиент: 18, абонемент: 34, занятие: 26
+DO
+ last_name | first_name | subscription_id | paid_amount | is_paid | status 
+-----------+------------+-----------------+-------------+---------+--------
+ Учебный   | Клиент     |              34 |     1500.00 | t       | booked
+(1 row)
+
+RESET
+ROLLBACK
+
+
+Параллельные операции в отдельной базе
+------------------------------------------------------------
+
+[
+  {
+    "test": "Две оплаты по 60 при цене 100",
+    "second_session_waited": true,
+    "second_session_error": "Сумма платежей превышает цену продажи",
+    "remaining_state": [
+      1,
+      "60.00"
+    ],
+    "result": "OK"
+  },
+  {
+    "test": "Две записи на одно место",
+    "second_session_waited": true,
+    "second_session_error": "На занятии нет свободных мест",
+    "remaining_state": [
+      1
+    ],
+    "result": "OK"
+  },
+  {
+    "test": "Явный отказ от неподдерживаемого режима записи",
+    "result": "OK",
+    "message": "Изменения выполняются на уровне READ COMMITTED"
+  }
+]
